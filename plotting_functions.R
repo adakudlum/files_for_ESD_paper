@@ -1,5 +1,5 @@
 #------------------------------------------------------------------------------------------
-# This script contains functions used in the main scripts to plot the figures
+# This script contains functions used in the script "make_figures_5_to_14.R" to plot the figures
 # in the paper Adakudlu et al., 2026
 #------------------------------------------------------------------------------------------
 
