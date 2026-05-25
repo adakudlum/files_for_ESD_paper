@@ -23,13 +23,13 @@
 #                                  high1 
 #                   abs.difference (absolute differences between every ensemble member) -- 
 #                                  |   
-#                                  year (1980-2150)
+#                                  year 
 #                                  low1 
 #                                  median 
 #                                  high1 
 #                   per.difference (percent differences between every ensemble member) -- 
 #                                  |   
-#                                  year (1980-2150)
+#                                  year 
 #                                  low1 
 #                                  median 
 #                                  high1 
@@ -39,7 +39,8 @@
 # This script can be run on a standard Rstudio terminal, visual code terminal, or a Linux terminal
 # with the command - source('make_Figure_4_EMB_vs_Counterfactual.R')
 #
-# Muralidhar Adakudlu, Norwegian Meteorological Institute
+# Muralidhar Adakudlu, 20/5/2026
+# Norwegian Meteorological Institute
 #--------------------------------------------------------------------------------------------------
 #install.packages(c(
 #  "readxl",
