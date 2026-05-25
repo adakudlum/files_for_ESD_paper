@@ -1,55 +1,142 @@
 # Creates the plots #5 to #13 
-
+#--------------------------------------------------------------------------------------------
 # Input:
 # 
-# Data should be in RDS format, separate files for every experiment listed in Table 2 of the paper
-# Each input file contains a nested list of variables required for the paper with
-#  4 metrics (actual run, NoImpacts counterfactual, absolute difference, and percent difference),
-#  each having the corresponding median, 67% bound and the 95% bound
-# The input files come from the post-processing of the raw uncertainty sampling with 100,000 members of FRIDAv2.1
-
-# Author:
+# Data should be in RDS format, with the following structure
+#
+# filename--
+#           |
+#           variable 1--
+#                       | 
+#                       baseline -- 
+#                                  |   
+#                                  year (1980-2150)
+#                                  low1 (16.5% quantile)
+#                                  median (50% quantile)
+#                                  high1 (83.4% quantile)
+#                   counterfactual (the NoImpacts case) -- 
+#                                  |   
+#                                  year 
+#                                  low1 
+#                                  median 
+#                                  high1 
+#                   abs.difference (absolute differences between every ensemble member) -- 
+#                                  |   
+#                                  year (1980-2150)
+#                                  low1 
+#                                  median 
+#                                  high1 
+#                   per.difference (percent differences between every ensemble member) -- 
+#                                  |   
+#                                  year (1980-2150)
+#                                  low1 
+#                                  median 
+#                                  high1 
+#            variable 2 -- and so on
+#
+#------------ How to execute -------------
+# This script can be run on a standard Rstudio terminal, visual code terminal, or a Linux terminal
+# with the command - source('make_figures_5_to_14.R')
+#
 # Muralidhar Adakudlu, Norwegian Meteorological Institute
+#--------------------------------------------------------------------------------------------------
+
+
+#------ Load required libraries 
+
+# install.packages(c(
+#"tidyverse",
+#"ggpubr",
+#"latex2exp",
+#"abind",
+#"patchwork",
+#"rstudioapi",
+#"extrafont",
+#"showtext"
+#))
+#
 
 library(tidyverse)
 library(ggpubr)
 require(latex2exp)
 library(abind)
+library(patchwork)
+library(rstudioapi)
+# libraries to adjust plot sizes
+library(extrafont)
+library(showtext)
 
-setwd('G:/My Drive/R/r-scripts/worldTrans/make_plots_nonlinearity_paper')
+
+# ---------------------------------------------------------------------
+# Set working directory to script location
+# ---------------------------------------------------------------------
 remove(list=ls())
-filepath.emb <- 'G:/My Drive/R/r-scripts/worldTrans/WorldTransFRIDA-aggregateDamages/outputData'
+script_path <- normalizePath("make_figures_5_to_14.R")
+script_dir  <- dirname(script_path)
+setwd(script_dir)
+data_dir    <- file.path(script_dir,'data')
+figures_dir <- file.path(script_dir, 'figures')
 
-emb.cfb.on         <- readRDS(file.path(filepath.emb,'dataForCompoundDam-policy_EMB-ClimateFeedback_emb-ClimateSTAOverride_Off_new_sampling.RDS'))
-emb.cfb.finance <- readRDS(file.path(filepath.emb,'dataForCompoundDam-policy_EMB-ClimateFeedback_FinanceImpact-ClimateSTAOverride_Off.RDS'))
-emb.cfb.labor <- readRDS(file.path(filepath.emb,'dataForCompoundDam-policy_EMB-ClimateFeedback_LabourImpact-ClimateSTAOverride_Off.RDS'))
-emb.cfb.govt <- readRDS(file.path(filepath.emb,'dataForCompoundDam-policy_EMB-ClimateFeedback_GovernmentImpact-ClimateSTAOverride_Off.RDS'))
-emb.cfb.demography <- readRDS(file.path(filepath.emb,'dataForCompoundDam-policy_EMB-ClimateFeedback_DemographyImpact-ClimateSTAOverride_Off.RDS'))
-emb.cfb.landuse <- readRDS(file.path(filepath.emb,'dataForCompoundDam-policy_EMB-ClimateFeedback_LanduseImpact-ClimateSTAOverride_Off.RDS'))
-emb.cfb.behavior <- readRDS(file.path(filepath.emb,'dataForCompoundDam-policy_EMB-ClimateFeedback_BehavioralImpact-ClimateSTAOverride_Off_testing.RDS'))
-emb.cfb.energy <- readRDS(file.path(filepath.emb,'dataForCompoundDam-policy_EMB-ClimateFeedback_EnergyImpact-ClimateSTAOverride_Off.RDS'))
-emb.cfb.concrete <- readRDS(file.path(filepath.emb,'dataForCompoundDam-policy_EMB-ClimateFeedback_ConcreteImpact-ClimateSTAOverride_Off.RDS'))
-emb.cfb.slr <- readRDS(file.path(filepath.emb,'dataForCompoundDam-policy_EMB-ClimateFeedback_SLRImpact-ClimateSTAOverride_Off.RDS'))
+#---------------------------------------------------------------------
+# Function to check if the input data directory exists and is not empty
+#----------------------------------------------------------------------
+check_directory <- function(path) {
+  
+  # Check if directory exists
+  if (!dir.exists(path)) {
+    return(FALSE)
+  }
+  
+  # Check if directory is empty
+  files <- list.files(path, all.files = TRUE, no.. = TRUE)
+  
+  if (length(files) == 0) {
+    return(FALSE)
+  }
+  
+  return(TRUE)
+}
 
+# ---------------------------------------------------------------------
+# Read input data
+# ---------------------------------------------------------------------
+if (check_directory(data_dir)) {
+     df.emb       <- readRDS(file.path(data_dir,'dataForCompoundDam-ClimateFeedback_AllImpacts.RDS'))
+     df.finance <- readRDS(file.path(data_dir,'dataForCompoundDam-ClimateFeedback_FRoL.RDS'))
+     df.labour <- readRDS(file.path(data_dir,'dataForCompoundDam-ClimateFeedback_LaPr.RDS'))
+     df.govsp <- readRDS(file.path(data_dir,'dataForCompoundDam-ClimateFeedback_GovSp.RDS'))
+     df.mortality <- readRDS(file.path(data_dir,'dataForCompoundDam-ClimateFeedback_Mortality.RDS'))
+     df.landuse <- readRDS(file.path(data_dir,'dataForCompoundDam-ClimateFeedback_CrFw.RDS'))
+     df.behaviour <- readRDS(file.path(data_dir,'dataForCompoundDam-ClimateFeedback_ClimExHB.RDS'))
+     df.energy <- readRDS(file.path(data_dir,'dataForCompoundDam-ClimateFeedback_En.RDS'))
+     df.concrete <- readRDS(file.path(data_dir,'dataForCompoundDam-ClimateFeedback_DuCn.RDS'))
+     df.slr <- readRDS(file.path(data_dir,'dataForCompoundDam-ClimateFeedback_SLR.RDS'))
+     cat("Input data read successfully")
+} else {
+       stop("I/p directory is missing or is empty.")
+     }
+
+#*********** These are the variables we need for the paper
+#*
 variables.list <- c(
-  # Economy #
+  #---------------- Economy
   "demographics_real_gdp_per_person",
   "government_government_consumption",
   "employment_realised_productivity",
-  ### Demography ###
+  #-----------------Demography
   "demographics_population",
   "demographics_total_deaths",
   "demographics_births",
-  ### Energy ###
+  #------------- Energy
   "energy_demand_demand_for_energy",
-  ### Human behaviour ###
+  #--------- Human behaviour
   "food_demand_direct_food_demand_per_person_per_day",
-  ### Resources
+  #---------- Resources
   "concrete_total_yearly_concrete_use",
-  ### Land use and agriculture ###
+  #--------- Land use and agriculture ###
   "freshwater_agricultural_water_withdrawal",
   "crop_crop_yield",
-  ### Climate ###
+  #----------- Climate
   "energy_balance_model_surface_temperature_anomaly",
   "emissions_total_co2_emissions",
   "emissions_total_ch4_emissions",
@@ -62,49 +149,45 @@ variables.list <- c(
   "sea_level_total_global_sea_level_anomaly"
  )
 
-# Put units here only, but for titles, names and units can be separated
-title.list <- c("GDP per capita", #"Government consumption", "Productivity",
-                "Population","Mortality","Births",
-                "Demand for energy",
-                "Total food demand",
-                "Total yearly concrete use",
-                "Water use","Crop yield",
-                "Surface Temperature anomaly",
-                "Total CO2 emissions","Total CH4 emissions","Total N2O emissions","Total SO2 emissions",
-                "Total NOx emissions","Total VOC emissions","Total CO emissions","Minor GHG emissions",
-                "Sea_level_anomaly")
-                
-data.absolute <- sapply(variables.list, function(k) {
-                 map_df(.x=list("counterfactual"=emb.cfb.on[[k]]$counterfactual,
-                 "emb"=emb.cfb.on[[k]]$baseline,
-                 "finance"=emb.cfb.finance[[k]]$baseline,
-                 "labor"=emb.cfb.labor[[k]]$baseline,
-                 "govt"=emb.cfb.govt[[k]]$baseline,
-                 "demography"=emb.cfb.demography[[k]]$baseline,
-                 "landuse"=emb.cfb.landuse[[k]]$baseline,
-                 "behavior"=emb.cfb.behavior[[k]]$baseline,
-                 "energy"=emb.cfb.energy[[k]]$baseline,
-                 "concrete"=emb.cfb.concrete[[k]]$baseline,
-                 "slr"=emb.cfb.slr[[k]]$baseline),
-         .f=bind_rows,
-         .id="Experiment")}, simplify = FALSE)
+#***************** Read the absolute values *****************
 
-# This set has the uncertainty range per ensemble member. Looks unrealistic in the plots
-data.difference <- sapply(variables.list, function(k) {
-  map_df(.x=list("emb"=emb.cfb.on[[k]]$per.difference,
-                 "finance"=emb.cfb.finance[[k]]$per.difference,
-                 "labor"=emb.cfb.labor[[k]]$per.difference,
-                 "govt"=emb.cfb.govt[[k]]$per.difference,
-                 "demography"=emb.cfb.demography[[k]]$per.difference,
-                 "landuse"=emb.cfb.landuse[[k]]$per.difference,
-                 "behavior"=emb.cfb.behavior[[k]]$per.difference,
-                 "energy"=emb.cfb.energy[[k]]$per.difference,
-                 "concrete"=emb.cfb.concrete[[k]]$per.difference,
-                 "slr"=emb.cfb.slr[[k]]$per.difference),
+data.absolute <- sapply(variables.list, function(k) 
+  {
+  map_df(.x=list("counterfactual"=df.emb[[k]]$counterfactual,
+                 "emb"=df.emb[[k]]$baseline,
+                 "finance"=df.finance[[k]]$baseline,
+                 "labor"=df.labour[[k]]$baseline,
+                 "govt"=df.govsp[[k]]$baseline,
+                 "demography"=df.mortality[[k]]$baseline,
+                 "landuse"=df.landuse[[k]]$baseline,
+                 "behavior"=df.behaviour[[k]]$baseline,
+                 "energy"=df.energy[[k]]$baseline,
+                 "concrete"=df.concrete[[k]]$baseline,
+                 "slr"=df.slr[[k]]$baseline),
          .f=bind_rows,
-         .id="Experiment")}, simplify = FALSE)
+         .id="Experiment")
+  }, simplify = FALSE)
 
-# Add new item, total GHG emissions, to the lists above
+#***************** Read the percent differences *****************
+
+data.difference <- sapply(variables.list, function(k) 
+  {
+  map_df(.x=list("emb"=df.emb[[k]]$per.difference,
+                 "finance"=df.finance[[k]]$per.difference,
+                 "labor"=df.labour[[k]]$per.difference,
+                 "govt"=df.govsp[[k]]$per.difference,
+                 "demography"=df.mortality[[k]]$per.difference,
+                 "landuse"=df.landuse[[k]]$per.difference,
+                 "behavior"=df.behaviour[[k]]$per.difference,
+                 "energy"=df.energy[[k]]$per.difference,
+                 "concrete"=df.concrete[[k]]$per.difference,
+                 "slr"=df.slr[[k]]$per.difference),
+         .f=bind_rows,
+         .id="Experiment")
+  }, simplify = FALSE)
+
+#*********** Estimate the total GHG emissions by adding individual sources
+
 data.absolute$emissions_total_ghg_emissions <- map_df(.x=list("total_co2_emissions"=data.absolute[names(data.absolute) %in% c("emissions_total_co2_emissions")],
                      "total_ch4_emissions"=data.absolute[names(data.absolute) %in% c("emissions_total_ch4_emissions")],
                      "total_n2o_emissions"=data.absolute[names(data.absolute) %in% c("emissions_total_n2o_emissions")],
@@ -137,165 +220,51 @@ data.difference$emissions_total_ghg_emissions <- map_df(.x=list("total_co2_emiss
             high1=sum(high1*multiply),
             )
 
-# Plotting function 
-plot.fun <- function(model.data, shading.data, errorbar.data,  multiplier, 
-                     values.linetype, values.color, values.fill,
-                     breaks.plot, 
-                     labels.plot,
-                     y.label,title.label){
-  ggplot()+
-    geom_line(data=model.data,
-              mapping=aes(x=as.character(year),y=median*multiplier, linetype=Experiment,color=Experiment, group = Experiment), linewidth=.7)+
-    geom_ribbon(data=shading.data,
-                mapping=aes(x=as.character(year),ymax=high1*multiplier,ymin=low1*multiplier,fill=Experiment,group = Experiment),alpha=0.2)+
-    geom_errorbar(data=errorbar.data,
-                mapping=aes(x=as.character(year),ymax=high1*multiplier,ymin=low1*multiplier,width=4, color= Experiment, group = Experiment, linetype=Experiment),alpha=0.9)+geom_jitter()+
-  
-    theme_bw()+
-    labs(x=NULL,y=TeX(y.label),title=title.label)+
-    scale_x_discrete(breaks=seq(1980,2150,by=20))+
-    scale_shape_manual(values = 1, labels=c("Calibration"),guide="none") +
-    scale_linetype_manual(values=values.linetype,
-                          breaks = breaks.plot,
-                          labels=labels.plot)+
-    scale_color_manual(values=values.color,
-                       breaks = breaks.plot,
-                       labels= labels.plot)+
-    scale_fill_discrete(type=values.fill,
-                        breaks = breaks.plot,
-                        labels=labels.plot)+
-    theme(axis.text.x = element_text(family = "sans",size=10,angle=45, vjust=0.3, color="black"),
-          axis.text.y = element_text(family = "sans",size=12, vjust=0.3, color="black"),
-          axis.title = element_text(family = "sans",size=13, vjust=0.3, color="black"),
-          plot.title = element_text(family = "sans",size=13, vjust=0.3, color="black"),
-          panel.grid.major = element_line(color="grey",linewidth=0.5,linetype=3),
-          panel.grid.minor = element_blank(),
-          panel.border = element_rect(colour = "grey", fill = NA),
-          strip.placement = "outside",
-          panel.spacing.x = unit(0,"lines"),
-          panel.spacing.y = unit(0,"lines"),
-          legend.direction = "horizontal",
-          legend.position = "bottom",
-          legend.title = element_blank(),
-          legend.text = element_text(family = "sans",size=12, vjust=0.5, color="black"),
-          legend.key.spacing.x = unit(2,"cm"),
-          legend.key.width = unit(2, "lines"))+
-    guides(colour =guide_legend(ncol=4), fill=guide_legend(ncol=1),linetype=guide_legend(ncol=4))}
 
-plot.fun.logy <- function(model.data, shading.data, errorbar.data,  multiplier, 
-                     values.linetype, values.color, values.fill,
-                     breaks.plot, 
-                     labels.plot,
-                     y.label,title.label){
-  ggplot()+
-    geom_line(data=model.data,
-              mapping=aes(x=as.character(year),y=median*multiplier, linetype=Experiment,color=Experiment, group = Experiment), linewidth=.7)+
-    geom_ribbon(data=shading.data,
-                mapping=aes(x=as.character(year),ymax=high1*multiplier,ymin=low1*multiplier,fill=Experiment,group = Experiment),alpha=0.2)+
-    geom_errorbar(data=errorbar.data,
-                  mapping=aes(x=as.character(year),ymax=high1*multiplier,ymin=low1*multiplier,width=4, color= Experiment, group = Experiment, linetype=Experiment),alpha=0.9)+geom_jitter()+
-    
-    theme_bw()+
-    scale_y_log10()+
-    labs(x=NULL,y=TeX(y.label),title=title.label)+
-    scale_x_discrete(breaks=seq(1980,2150,by=20))+
-    scale_shape_manual(values = 1, labels=c("Calibration"),guide="none") +
-    scale_linetype_manual(values=values.linetype,
-                          breaks = breaks.plot,
-                          labels=labels.plot)+
-    scale_color_manual(values=values.color,
-                       breaks = breaks.plot,
-                       labels= labels.plot)+
-    scale_fill_discrete(type=values.fill,
-                        breaks = breaks.plot,
-                        labels=labels.plot)+
-    theme(axis.text.x = element_text(family = "sans",size=10,angle=45, vjust=0.3, color="black"),
-          axis.text.y = element_text(family = "sans",size=12, vjust=0.3, color="black"),
-          axis.title = element_text(family = "sans",size=13, vjust=0.3, color="black"),
-          plot.title = element_text(family = "sans",size=13, vjust=0.3, color="black"),
-          panel.grid.major = element_line(color="grey",linewidth=0.5,linetype=3),
-          panel.grid.minor = element_blank(),
-          panel.border = element_rect(colour = "grey", fill = NA),
-          strip.placement = "outside",
-          panel.spacing.x = unit(0,"lines"),
-          panel.spacing.y = unit(0,"lines"),
-          legend.direction = "horizontal",
-          legend.position = "bottom",
-          legend.title = element_blank(),
-          legend.text = element_text(family = "sans",size=12, vjust=0.5, color="black"),
-          legend.key.spacing.x = unit(2,"cm"),
-          legend.key.width = unit(2, "lines"))+
-    guides(colour =guide_legend(ncol=4), fill=guide_legend(ncol=1),linetype=guide_legend(ncol=4))}
+#------------ Function to manually set the years for which we draw the error bars in plots with absolute values
 
-plot.diff <- function(model.data, multiplier, 
-                     values.linetype, values.color, values.fill,
-                     breaks.plot, 
-                     labels.plot,
-                     y.label,title.label){
-  ggplot()+
-    geom_line(data=model.data,
-              mapping=aes(x=as.character(year),y=median*multiplier, linetype=Experiment,color=Experiment, group = Experiment), linewidth=.7)+
-    theme_bw()+
-    labs(x=NULL,y=TeX(y.label),title=paste(title.label, "(deviations from NoImpacts)")) +
-    scale_x_discrete(breaks=seq(1980,2150,by=20))+
-    scale_shape_manual(values = 1, labels=c("Calibration"),guide="none") +
-    scale_linetype_manual(values=values.linetype,
-                          breaks = breaks.plot,
-                          labels=labels.plot)+
-    scale_color_manual(values=values.color,
-                       breaks = breaks.plot,
-                       labels= labels.plot,)+
-    scale_fill_discrete(type=values.fill,
-                        breaks = breaks.plot,
-                        labels=labels.plot)+
-    theme(axis.text.x = element_text(family = "sans",size=10,angle=45, vjust=0.3, color="black"),
-          axis.text.y = element_text(family = "sans",size=12, vjust=0.3, color="black"),
-          axis.title = element_text(family = "sans",size=13, vjust=0.3, color="black"),
-          plot.title = element_text(family = "sans",size=13, vjust=0.3, color="black"),
-          panel.grid.major = element_line(color="grey",linewidth=0.5,linetype=3),
-          panel.grid.minor = element_blank(),
-          panel.border = element_rect(colour = "grey", fill = NA),
-          strip.placement = "outside",
-          panel.spacing.x = unit(0,"lines"),
-          panel.spacing.y = unit(0,"lines"),
-          legend.direction = "horizontal",
-          legend.position = "bottom",
-          legend.title = element_blank(),
-          legend.text = element_text(family = "sans",size=12, vjust=0.5, color="black"),
-          legend.key.spacing.x = unit(2,"cm"),
-          legend.key.width = unit(2, "lines"))+
-    guides(colour =guide_legend(ncol=4), fill=guide_legend(ncol=1),linetype=guide_legend(ncol=4))}
+data.absolute.4.errorbar <- function(data){
+  as.data.frame(data) %>% 
+    mutate(low1 = ifelse(Experiment %in% "finance" & year %in% seq(2020,2150,by=20), low1, 
+                  ifelse(Experiment %in% "govt" & year %in% seq(2023,2150,by=20), low1,
+                  ifelse(Experiment %in% "labor" & year %in% seq(2026,2150,by=20), low1,
+                  ifelse(Experiment %in% "slr" & year %in% seq(2029,2150,by=20), low1, 
+                  ifelse(Experiment %in% "landuse" & year %in% seq(2032,2150,by=20), low1,
+                  ifelse(Experiment %in% "behavior" & year %in% seq(2035,2150,by=20), low1,
+                  ifelse(Experiment %in% "energy" & year %in% seq(2038,2150,by=20), low1, 
+                  ifelse(Experiment %in% "concrete" & year %in% seq(2042,2150,by=20), low1,
+                  ifelse(Experiment %in% "demography" & year %in% seq(2045,2150,by=20), low1,
+                  ifelse(Experiment %in% "sum of individuals" & year %in% seq(2015,2145,by=30), low1,NA)))))))))),
+           high1= ifelse(Experiment %in% "finance" & year %in% seq(2020,2150,by=20), high1, 
+                  ifelse(Experiment %in% "govt" & year %in% seq(2023,2150,by=20), high1,
+                  ifelse(Experiment %in% "labor" & year %in% seq(2026,2150,by=20), high1,
+                  ifelse(Experiment %in% "slr" & year %in% seq(2029,2150,by=20), high1, 
+                  ifelse(Experiment %in% "landuse" & year %in% seq(2032,2150,by=20), high1,
+                  ifelse(Experiment %in% "behavior" & year %in% seq(2035,2150,by=20), high1,
+                  ifelse(Experiment %in% "energy" & year %in% seq(2038,2150,by=20), high1, 
+                  ifelse(Experiment %in% "concrete" & year %in% seq(2042,2150,by=20), high1,
+                  ifelse(Experiment %in% "demography" & year %in% seq(2045,2150,by=20), high1,
+                  ifelse(Experiment %in% "sum of individuals" & year %in% seq(2015,2145,by=30), high1,NA)))))))))),
+    )
+  }
 
-data.absolute.4.errorbar <- function(data){as.data.frame(data) %>% mutate(low1 = ifelse(Experiment %in% "finance" & year %in% seq(2020,2150,by=20), low1, 
-                                                                                        ifelse(Experiment %in% "govt" & year %in% seq(2023,2150,by=20), low1,
-                                                                                               ifelse(Experiment %in% "labor" & year %in% seq(2026,2150,by=20), low1,
-                                                                                                      ifelse(Experiment %in% "slr" & year %in% seq(2029,2150,by=20), low1, 
-                                                                                                             ifelse(Experiment %in% "landuse" & year %in% seq(2032,2150,by=20), low1,
-                                                                                                                    ifelse(Experiment %in% "behavior" & year %in% seq(2035,2150,by=20), low1,
-                                                                                                                           ifelse(Experiment %in% "energy" & year %in% seq(2038,2150,by=20), low1, 
-                                                                                                                                  ifelse(Experiment %in% "concrete" & year %in% seq(2042,2150,by=20), low1,
-                                                                                                                                         ifelse(Experiment %in% "demography" & year %in% seq(2045,2150,by=20), low1,
-                                                                                                                                                ifelse(Experiment %in% "sum of individuals" & year %in% seq(2015,2145,by=30), low1,NA)))))))))),
-                                                                          high1= ifelse(Experiment %in% "finance" & year %in% seq(2020,2150,by=20), high1, 
-                                                                                        ifelse(Experiment %in% "govt" & year %in% seq(2023,2150,by=20), high1,
-                                                                                               ifelse(Experiment %in% "labor" & year %in% seq(2026,2150,by=20), high1,
-                                                                                                      ifelse(Experiment %in% "slr" & year %in% seq(2029,2150,by=20), high1, 
-                                                                                                             ifelse(Experiment %in% "landuse" & year %in% seq(2032,2150,by=20), high1,
-                                                                                                                    ifelse(Experiment %in% "behavior" & year %in% seq(2035,2150,by=20), high1,
-                                                                                                                           ifelse(Experiment %in% "energy" & year %in% seq(2038,2150,by=20), high1, 
-                                                                                                                                  ifelse(Experiment %in% "concrete" & year %in% seq(2042,2150,by=20), high1,
-                                                                                                                                         ifelse(Experiment %in% "demography" & year %in% seq(2045,2150,by=20), high1,
-                                                                                                                                                ifelse(Experiment %in% "sum of individuals" & year %in% seq(2015,2145,by=30), high1,NA)))))))))),
-                                                                                                                        )}
+cat("Data processing complete. Continue to plotting", "\n")
 
-library(extrafont)
-library(showtext)
+#------------------------------------------------------------------------------------------------------------------
+#
+# -------------------                             PLOTTING                 ----------------------------------------
+#
+#------------------------------------------------------------------------------------------------------------------
+
+# Get the plotting functions
+source('plotting_functions.R')
+
 showtext_opts(dpi = 300)
 showtext_auto()
 
-#******* GDP and Econ variables *********************
+#*******  Econ variables *********************
 data.to.plot <- data.absolute$demographics_real_gdp_per_person
-gdp.per.capita.plot.abs <- plot.fun(model.data=data.to.plot[data.to.plot$Experiment %in% c("counterfactual","emb","finance","labor","govt", "energy","slr"),],
+gdp.per.capita.plot.abs <- plot.absolute(model.data=data.to.plot[data.to.plot$Experiment %in% c("counterfactual","emb","finance","labor","govt", "energy","slr"),],
                                        shading.data = data.to.plot[data.to.plot$Experiment %in% c("counterfactual","emb"),], 
                                        errorbar.data = data.absolute.4.errorbar(data.to.plot)[data.absolute.4.errorbar(data.to.plot)$Experiment %in% c("finance","labor","govt", "energy","slr"),],
                                        multiplier=1,
@@ -310,7 +279,7 @@ gdp.per.capita.plot.abs <- plot.fun(model.data=data.to.plot[data.to.plot$Experim
                                        title.label="(a) GDP per capita")
 
 data.to.plot <- data.difference$demographics_real_gdp_per_person
-gdp.per.capita.plot.diff <- plot.diff(model.data=data.to.plot[data.to.plot$Experiment %in% c("counterfactual","emb","finance","labor","govt", "energy","slr"),],
+gdp.per.capita.plot.diff <- plot.difference.no.grey.line(model.data=data.to.plot[data.to.plot$Experiment %in% c("counterfactual","emb","finance","labor","govt", "energy","slr"),],
                                                   multiplier=1,
                                                   values.linetype=c("solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                                                   values.color=c("black","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -323,7 +292,7 @@ gdp.per.capita.plot.diff <- plot.diff(model.data=data.to.plot[data.to.plot$Exper
                                                   title.label="(b) GDP per capita")
 
 data.to.plot <- data.absolute$government_government_consumption
-govt.plot.abs <- plot.fun.logy(model.data=data.to.plot[data.to.plot$Experiment %in% c("counterfactual","emb","finance","labor","govt", "energy", "slr"),],
+govt.plot.abs <- plot.absolute.logy(model.data=data.to.plot[data.to.plot$Experiment %in% c("counterfactual","emb","finance","labor","govt", "energy", "slr"),],
                                                   shading.data = data.to.plot[data.to.plot$Experiment %in% c("counterfactual","emb"),], 
                                                   errorbar.data = data.absolute.4.errorbar(data.to.plot)[data.absolute.4.errorbar(data.to.plot)$Experiment %in% c("finance","labor","govt", "energy"),],
                                                   multiplier=1,
@@ -338,7 +307,7 @@ govt.plot.abs <- plot.fun.logy(model.data=data.to.plot[data.to.plot$Experiment %
                                                   title.label="(e) Government spending")
 
 data.to.plot <- data.difference$government_government_consumption
-govt.plot.diff <- plot.diff(model.data=data.to.plot[data.to.plot$Experiment %in% c("counterfactual","emb","finance","labor","govt", "energy", "slr"),],
+govt.plot.diff <- plot.difference.no.grey.line(model.data=data.to.plot[data.to.plot$Experiment %in% c("counterfactual","emb","finance","labor","govt", "energy", "slr"),],
                                                    multiplier=1,
                                                    values.linetype=c("solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                                                    values.color=c("black","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -351,7 +320,7 @@ govt.plot.diff <- plot.diff(model.data=data.to.plot[data.to.plot$Experiment %in%
                                                    title.label="(f) Government spending")
 
 data.to.plot <- data.absolute$employment_realised_productivity
-labour.plot.abs <- plot.fun.logy(model.data=data.to.plot[data.to.plot$Experiment %in% c("counterfactual","emb","finance","labor","govt", "energy","slr"),],
+labour.plot.abs <- plot.absolute.logy(model.data=data.to.plot[data.to.plot$Experiment %in% c("counterfactual","emb","finance","labor","govt", "energy","slr"),],
                                         shading.data = data.to.plot[data.to.plot$Experiment %in% c("counterfactual","emb"),], 
                                         errorbar.data = data.absolute.4.errorbar(data.to.plot)[data.absolute.4.errorbar(data.to.plot)$Experiment %in% c("finance","labor","govt", "energy","slr"),],
                                         multiplier=1,
@@ -366,7 +335,7 @@ labour.plot.abs <- plot.fun.logy(model.data=data.to.plot[data.to.plot$Experiment
                                         title.label="(c) Labour productivity")
 
 data.to.plot <- data.difference$employment_realised_productivity
-labour.plot.diff <- plot.diff(model.data=data.to.plot[data.to.plot$Experiment %in% c("counterfactual","emb","finance","labor","govt", "energy","slr"),],
+labour.plot.diff <- plot.difference.no.grey.line(model.data=data.to.plot[data.to.plot$Experiment %in% c("counterfactual","emb","finance","labor","govt", "energy","slr"),],
                                          #shading.data = data.to.plot[data.to.plot$Experiment %in% c("counterfactual","emb"),], 
                                          #errorbar.data = data.absolute.4.errorbar(data.to.plot)[data.absolute.4.errorbar(data.to.plot)$Experiment %in% c("finance","labor","govt", "energy","slr"),],
                                          multiplier=1,
@@ -388,15 +357,12 @@ panel.finance.sector <- ggarrange(gdp.per.capita.plot.abs, gdp.per.capita.plot.d
                                   heights= c(1,1,1),widths= c(1,1,1),
                                   align= "v",legend = "bottom",
                                   common.legend = T)
-print(panel.finance.sector)
-ggsave(filename=paste0("figure_5_finance_impacts",".png"),
-       plot=panel.finance.sector,
-       height = 8, width=10)
+
 
 #************************* Mortality **************************
 data.to.plot <- data.absolute$demographics_total_deaths
 cases.to.plot <- c("counterfactual","emb","finance","labor","govt","demography")
-mortality.plot.abs <- plot.fun(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
+mortality.plot.abs <- plot.absolute(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
                                shading.data = data.to.plot[data.to.plot$Experiment %in% c("counterfactual","emb"),], 
                                errorbar.data = data.absolute.4.errorbar(data.to.plot)[data.absolute.4.errorbar(data.to.plot)$Experiment %in% cases.to.plot,],
                                multiplier=1,
@@ -410,7 +376,7 @@ mortality.plot.abs <- plot.fun(model.data=data.to.plot[data.to.plot$Experiment %
                                title.label="(a) Mortality")
 
 data.to.plot <- data.difference$demographics_total_deaths
-mortality.plot.diff <- plot.diff(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
+mortality.plot.diff <- plot.difference.no.grey.line(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
                                  multiplier=1,
                                  values.linetype=c("solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                                  values.color=c("black","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -426,15 +392,12 @@ panel.mortality.sector <- ggarrange(mortality.plot.abs,mortality.plot.diff,
                                     heights= c(1,1,1),widths= c(1,1,1),
                                     align= "v",legend = "bottom",
                                     common.legend = T)
-print(panel.mortality.sector)
-ggsave(filename=paste0("figure_6_Mortality_Impact",".png"),
-       plot=panel.mortality.sector,
-       height =5 , width=9.5)
+
 
 #****************** Energy demand ********************
 data.to.plot <- data.absolute$energy_demand_demand_for_energy
 cases.to.plot <- c("counterfactual","emb","finance","labor","landuse", "energy","slr")
-energy.plot.abs <- plot.fun(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
+energy.plot.abs <- plot.absolute(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
                             shading.data = data.to.plot[data.to.plot$Experiment %in% c("counterfactual","emb"),], 
                             errorbar.data = data.absolute.4.errorbar(data.to.plot)[data.absolute.4.errorbar(data.to.plot)$Experiment %in% cases.to.plot,],
                             multiplier=1e-3,
@@ -448,7 +411,7 @@ energy.plot.abs <- plot.fun(model.data=data.to.plot[data.to.plot$Experiment %in%
                             title.label="(a) Energy demand")
 
 data.to.plot <- data.difference$energy_demand_demand_for_energy
-energy.plot.diff <- plot.diff(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
+energy.plot.diff <- plot.difference.no.grey.line(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
                              multiplier=1,
                              values.linetype=c("solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                              values.color=c("black","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -465,16 +428,12 @@ panel.energy.sector <- ggarrange(energy.plot.abs,energy.plot.diff,
                                   align= "v",legend = "bottom",
                                   common.legend = T)
 
-print(panel.energy.sector)
-ggsave(filename=paste0("figure_7_Energy_Impact",".png"),
-       plot=panel.energy.sector,
-       height = 4, width=10)
 
 #*************** Food demand ************************
 
 data.to.plot <- data.absolute$food_demand_direct_food_demand_per_person_per_day
 cases.to.plot <- c("counterfactual","emb","finance","labor","govt","landuse", "behavior", "energy","slr")
-food.plot.abs <- plot.fun(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
+food.plot.abs <- plot.absolute(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
                             shading.data = data.to.plot[data.to.plot$Experiment %in% c("counterfactual","emb"),], 
                             errorbar.data = data.absolute.4.errorbar(data.to.plot)[data.absolute.4.errorbar(data.to.plot)$Experiment %in% cases.to.plot,],
                             multiplier=1e-3,
@@ -489,7 +448,7 @@ food.plot.abs <- plot.fun(model.data=data.to.plot[data.to.plot$Experiment %in% c
 
 data.to.plot <- data.difference$food_demand_direct_food_demand_per_person_per_day
 cases.to.plot <- c("counterfactual","emb","finance","labor","govt","landuse","behavior", "energy","slr")
-food.plot.diff <- plot.diff(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
+food.plot.diff <- plot.difference.no.grey.line(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
                              multiplier=1,
                              values.linetype=c("solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                              values.color=c("black","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -507,16 +466,12 @@ panel.food.sector <- ggarrange(food.plot.abs,food.plot.diff,
                                  align= "v",legend = "bottom",
                                  common.legend = T)
 
-print(panel.food.sector)
-ggsave(filename=paste0("figure_8_food_impacts",".png"),
-       plot=panel.food.sector,
-       height = 5, width=10)
 
 #************* Resources *****************
 
 data.to.plot <- data.absolute$concrete_total_yearly_concrete_use
 cases.to.plot <- c("counterfactual","emb","finance","labor","govt", "energy","concrete","slr")
-concrete.plot.abs <- plot.fun(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
+concrete.plot.abs <- plot.absolute(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
                           shading.data = data.to.plot[data.to.plot$Experiment %in% c("counterfactual","emb"),], 
                           errorbar.data = data.absolute.4.errorbar(data.to.plot)[data.absolute.4.errorbar(data.to.plot)$Experiment %in% cases.to.plot,],
                           multiplier=1e-3,
@@ -530,7 +485,7 @@ concrete.plot.abs <- plot.fun(model.data=data.to.plot[data.to.plot$Experiment %i
                           title.label="(a) Annual concrete production")
 
 data.to.plot <- data.difference$concrete_total_yearly_concrete_use
-concrete.plot.diff <- plot.diff(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
+concrete.plot.diff <- plot.difference.no.grey.line(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
                            multiplier=1,
                            values.linetype=c("solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                            values.color=c("black","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -547,17 +502,12 @@ panel.concrete.sector <- ggarrange(concrete.plot.abs,concrete.plot.diff,
                                align= "v",legend = "bottom",
                                common.legend = T)
 
-print(panel.concrete.sector)
-ggsave(filename=paste0("figure_9_concrete_impacts",".png"),
-       plot=panel.concrete.sector,
-       height =5 , width=10)
-
 
 #************************* Crop yield and freshwater **************************
 
 data.to.plot <- data.absolute$crop_crop_yield
 cases.to.plot <- c("counterfactual","emb","finance","govt","landuse","behavior", "labor","energy")
-crop.plot.abs <- plot.fun(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
+crop.plot.abs <- plot.absolute(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
                                shading.data = data.to.plot[data.to.plot$Experiment %in% c("counterfactual","emb"),], 
                                errorbar.data = data.absolute.4.errorbar(data.to.plot)[data.absolute.4.errorbar(data.to.plot)$Experiment %in% cases.to.plot,],
                                multiplier=1,
@@ -571,7 +521,7 @@ crop.plot.abs <- plot.fun(model.data=data.to.plot[data.to.plot$Experiment %in% c
                                title.label="(a) Crop Yield")
 
 data.to.plot <- data.difference$crop_crop_yield
-crop.plot.diff <- plot.diff(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
+crop.plot.diff <- plot.difference.no.grey.line(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
                                 multiplier=1,
                                 values.linetype=c("solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                                 values.color=c("black","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -585,7 +535,7 @@ crop.plot.diff <- plot.diff(model.data=data.to.plot[data.to.plot$Experiment %in%
 
 data.to.plot <- data.absolute$freshwater_agricultural_water_withdrawal
 cases.to.plot <- c("counterfactual","emb","finance","labor","landuse")
-water.plot.abs <- plot.fun(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
+water.plot.abs <- plot.absolute(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
                           shading.data = data.to.plot[data.to.plot$Experiment %in% c("counterfactual","emb"),], 
                           errorbar.data = data.absolute.4.errorbar(data.to.plot)[data.absolute.4.errorbar(data.to.plot)$Experiment %in% cases.to.plot,],
                           multiplier=1,
@@ -599,7 +549,7 @@ water.plot.abs <- plot.fun(model.data=data.to.plot[data.to.plot$Experiment %in% 
                           title.label="(c) Water use")
 
 data.to.plot <- data.difference$freshwater_agricultural_water_withdrawal
-water.plot.diff <- plot.diff(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
+water.plot.diff <- plot.difference.no.grey.line(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
                            multiplier=1,
                            values.linetype=c("solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                            values.color=c("black","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -617,16 +567,12 @@ panel.landuse.sector <- ggarrange(crop.plot.abs,crop.plot.diff,
                                     heights= c(1,1,1),widths= c(1,1,1),
                                     align= "v",legend = "bottom",
                                     common.legend = T)
-print(panel.landuse.sector)
-ggsave(filename=paste0("figure_10_LandUse_Impact",".png"),
-       plot=panel.landuse.sector,
-       height =8 , width=11)
 
 ##******************************** Feedbacks to climate **###
 
 data.to.plot <- data.absolute$energy_balance_model_surface_temperature_anomaly
 cases.to.plot <- c("counterfactual","emb","finance","labor", "government","demography","energy","behavior","concrete","slr")
-sta.plot.abs <- plot.fun(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
+sta.plot.abs <- plot.absolute(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
                           shading.data = data.to.plot[data.to.plot$Experiment %in% c("counterfactual","emb"),], 
                           errorbar.data = data.absolute.4.errorbar(data.to.plot)[data.absolute.4.errorbar(data.to.plot)$Experiment %in% cases.to.plot,],
                           multiplier=1,
@@ -640,7 +586,7 @@ sta.plot.abs <- plot.fun(model.data=data.to.plot[data.to.plot$Experiment %in% ca
                           title.label="(a) Surface Temperature Anomaly")
 
 data.to.plot <- data.difference$energy_balance_model_surface_temperature_anomaly
-sta.plot.diff <- plot.diff(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
+sta.plot.diff <- plot.difference.no.grey.line(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
                            multiplier=1,
                            values.linetype=c("solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                            values.color=c("black","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -652,7 +598,7 @@ sta.plot.diff <- plot.diff(model.data=data.to.plot[data.to.plot$Experiment %in% 
                            title.label="(b) Surface Temperature Anomaly")
 
 data.to.plot <- data.absolute$emissions_total_ghg_emissions
-emissions.plot.abs <- plot.fun(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
+emissions.plot.abs <- plot.absolute(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
                          shading.data = data.to.plot[data.to.plot$Experiment %in% c("counterfactual","emb"),], 
                          errorbar.data = data.absolute.4.errorbar(data.to.plot)[data.absolute.4.errorbar(data.to.plot)$Experiment %in% cases.to.plot,],
                          multiplier=1e-3,
@@ -666,7 +612,7 @@ emissions.plot.abs <- plot.fun(model.data=data.to.plot[data.to.plot$Experiment %
                          title.label="(c) Total GHG emissions")
 
 data.to.plot <- data.difference$emissions_total_ghg_emissions
-emissions.plot.diff <- plot.diff(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
+emissions.plot.diff <- plot.difference.no.grey.line(model.data=data.to.plot[data.to.plot$Experiment %in% cases.to.plot,],
                           multiplier=1,
                           values.linetype=c("solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                           values.color=c("black","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -686,25 +632,21 @@ panel.climate.sector <- ggarrange(sta.plot.abs,sta.plot.diff,
                                   align= "v",legend = "bottom",
                                   common.legend = T)
 
-print(panel.climate.sector)
-ggsave(filename=paste0("figure_11_feedbacks_to_climate",".png"),
-       plot=panel.climate.sector,
-       height =8 , width=12)
 
 ##**** Plotting nonlinearities *****#############
 # For nonlinearity, we consider absolute differences
 
 data.difference <- sapply(variables.list, function(k) {
-  map_df(.x=list("emb"=emb.cfb.on[[k]]$abs.difference,
-                 "finance"=emb.cfb.finance[[k]]$abs.difference,
-                 "labor"=emb.cfb.labor[[k]]$abs.difference,
-                 "govt"=emb.cfb.govt[[k]]$abs.difference,
-                 "demography"=emb.cfb.demography[[k]]$abs.difference,
-                 "landuse"=emb.cfb.landuse[[k]]$abs.difference,
-                 "behavior"=emb.cfb.behavior[[k]]$abs.difference,
-                 "energy"=emb.cfb.energy[[k]]$abs.difference,
-                 "concrete"=emb.cfb.concrete[[k]]$abs.difference,
-                 "slr"=emb.cfb.slr[[k]]$abs.difference),
+  map_df(.x=list("emb"=df.emb[[k]]$abs.difference,
+                 "finance"=df.finance[[k]]$abs.difference,
+                 "labor"=df.labour[[k]]$abs.difference,
+                 "govt"=df.govsp[[k]]$abs.difference,
+                 "demography"=df.mortality[[k]]$abs.difference,
+                 "landuse"=df.landuse[[k]]$abs.difference,
+                 "behavior"=df.behaviour[[k]]$abs.difference,
+                 "energy"=df.energy[[k]]$abs.difference,
+                 "concrete"=df.concrete[[k]]$abs.difference,
+                 "slr"=df.slr[[k]]$abs.difference),
          .f=bind_rows,
          .id="Experiment")}, simplify = FALSE)
 
@@ -740,51 +682,11 @@ data.difference$emissions_total_ghg_emissions <- map_df(.x=list("total_co2_emiss
             high1=sum(high1*multiply)
             )
 
-plot.diff <- function(model.data, multiplier, 
-                      values.linetype, values.color, values.fill,
-                      breaks.plot, 
-                      labels.plot,
-                      y.label,title.label){
-  ggplot()+
-    geom_line(data=model.data,
-              mapping=aes(x=as.character(year),y=median*multiplier, linetype=Experiment,color=Experiment, group = Experiment), linewidth=.7)+
-    theme_bw()+
-    labs(x=NULL,y=TeX(y.label),title=title.label) +
-    scale_x_discrete(breaks=seq(1980,2150,by=20))+
-    scale_shape_manual(values = 1, labels=c("Calibration"),guide="none") +
-    scale_linetype_manual(values=values.linetype,
-                          breaks = breaks.plot,
-                          labels=labels.plot)+
-    scale_color_manual(values=values.color,
-                       breaks = breaks.plot,
-                       labels= labels.plot,)+
-    scale_fill_discrete(type=values.fill,
-                        breaks = breaks.plot,
-                        labels=labels.plot)+
-    theme(axis.text.x = element_text(family = "sans",size=12,angle=45, vjust=0.3, color="black"),
-          axis.text.y = element_text(family = "sans",size=15, vjust=0.3, color="black"),
-          axis.title = element_text(family = "sans",size=16, vjust=0.3, color="black"),
-          plot.title = element_text(family = "sans",size=16, vjust=0.3, color="black"),
-          panel.grid.major = element_line(color="grey",linewidth=0.5,linetype=3),
-          panel.grid.minor = element_blank(),
-          panel.border = element_rect(colour = "grey", fill = NA),
-          plot.margin = margin(t = 0.5, r = 0.5, b = 0.5, l = 0.5, "cm"),
-          strip.placement = "outside",
-          panel.spacing.x = unit(0,"lines"),
-          panel.spacing.y = unit(0,"lines"),
-          legend.direction = "horizontal",
-          legend.position = "bottom",
-          legend.title = element_blank(),
-          legend.text = element_text(family = "sans",size=15, vjust=0.5, color="black"),
-          legend.key.spacing.x = unit(.5,"cm"),
-          legend.key.width = unit(2, "cm"))+
-    guides(colour =guide_legend(ncol=4), linetype=guide_legend(ncol=4))}
-
 
 # Plots
 
 data.to.plot <- data.difference$demographics_real_gdp_per_person
-gdp.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
+gdp.plot.nonlinearity <- plot.difference.with.grey.line(model.data=data.to.plot,
                                     multiplier=1,
                                     values.linetype=c("solid","solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                                     values.color=c("black","grey","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -797,7 +699,7 @@ gdp.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
                                     title.label="(a) Real GDP per capita")
 
 data.to.plot <- data.difference$employment_realised_productivity
-productivity.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
+productivity.plot.nonlinearity <- plot.difference.with.grey.line(model.data=data.to.plot,
                                             multiplier=1,
                                             values.linetype=c("solid","solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                                             values.color=c("black","grey","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -810,7 +712,7 @@ productivity.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
                                             title.label="(b) Labour productivity")
 
 data.to.plot <- data.difference$government_government_consumption
-govt.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
+govt.plot.nonlinearity <- plot.difference.with.grey.line(model.data=data.to.plot,
                                     multiplier=1,
                                     values.linetype=c("solid","solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                                     values.color=c("black","grey","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -823,7 +725,7 @@ govt.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
                                     title.label="(c) Government expenditure")
 
 data.to.plot <- data.difference$demographics_population
-population.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
+population.plot.nonlinearity <- plot.difference.with.grey.line(model.data=data.to.plot,
                                     multiplier=1,
                                     values.linetype=c("solid","solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                                     values.color=c("black","grey","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -836,7 +738,7 @@ population.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
                                     title.label="(d) Total population")
 
 data.to.plot <- data.difference$demographics_total_deaths
-mortality.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
+mortality.plot.nonlinearity <- plot.difference.with.grey.line(model.data=data.to.plot,
                                            multiplier=1,
                                           values.linetype=c("solid","solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                                           values.color=c("black","grey","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -849,7 +751,7 @@ mortality.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
                                           title.label="(e) Mortality")
 
 data.to.plot <- data.difference$energy_demand_demand_for_energy
-energy.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
+energy.plot.nonlinearity <- plot.difference.with.grey.line(model.data=data.to.plot,
                                           multiplier=1e-3,
                                          values.linetype=c("solid","solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                                          values.color=c("black","grey","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -863,7 +765,7 @@ energy.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
 
 cases.to.plot <- c("sum of individuals","emb","finance","labor","govt","landuse", "behavior","energy","slr")
 data.to.plot <- data.difference$food_demand_direct_food_demand_per_person_per_day
-food.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
+food.plot.nonlinearity <- plot.difference.with.grey.line(model.data=data.to.plot,
                                     multiplier=1e-3,
                                     values.linetype=c("solid","solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                                     values.color=c("black","grey","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -876,10 +778,8 @@ food.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
                                     #y.label=r'(%)',
                                     title.label="(g) Food demand")
 
-print(food.plot.nonlinearity)
-
 data.to.plot <- data.difference$concrete_total_yearly_concrete_use
-concrete.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
+concrete.plot.nonlinearity <- plot.difference.with.grey.line(model.data=data.to.plot,
                                      multiplier=1e-3,
                                     values.linetype=c("solid","solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                                     values.color=c("black","grey","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -894,7 +794,7 @@ concrete.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
 
 
 data.to.plot <- data.difference$crop_crop_yield
-crop.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
+crop.plot.nonlinearity <- plot.difference.with.grey.line(model.data=data.to.plot,
                            multiplier=1,
                           values.linetype=c("solid","solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                           values.color=c("black","grey","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -907,7 +807,7 @@ crop.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
                           title.label="(i) Crop Yield")
 
 data.to.plot <- data.difference$freshwater_agricultural_water_withdrawal
-water.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
+water.plot.nonlinearity <- plot.difference.with.grey.line(model.data=data.to.plot,
                                     multiplier=1,
                                     values.linetype=c("solid","solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                                     values.color=c("black","grey","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -920,7 +820,7 @@ water.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
                                     title.label="(j) Agricultural water use")
 
 data.to.plot <- data.difference$emissions_total_ghg_emissions
-emissions.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
+emissions.plot.nonlinearity <- plot.difference.with.grey.line(model.data=data.to.plot,
                                    multiplier=1e-3,
                                    values.linetype=c("solid","solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                                    values.color=c("black","grey","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -934,7 +834,7 @@ emissions.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
 
 
 data.to.plot <- data.difference$energy_balance_model_surface_temperature_anomaly
-sta.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
+sta.plot.nonlinearity <- plot.difference.with.grey.line(model.data=data.to.plot,
                                    multiplier=1,
                                    values.linetype=c("solid","solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                                    values.color=c("black","grey","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -956,17 +856,12 @@ panel.nonlinearity <- ggarrange(gdp.plot.nonlinearity, productivity.plot.nonline
                                     heights= c(1,1,1),widths= c(1,1,1),
                                     align= "v", legend="bottom",
                                     common.legend = T)
-print(panel.nonlinearity)
-
-ggsave(filename=paste0("figure_13_panel_nonliearity",".png"),
-       plot=panel.nonlinearity,
-       height =14.5 , width=15)
 
 #-----------------------------
 # Plot the nonlinearities in individual emissions sources
 
 data.to.plot <- data.difference$emissions_total_co2_emissions
-co2.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
+co2.plot.nonlinearity <- plot.difference.with.grey.line(model.data=data.to.plot,
                                          multiplier=1,
                                          values.linetype=c("solid","solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                                          values.color=c("black","grey","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -979,7 +874,7 @@ co2.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
                                          title.label="(a) Total CO2 emissions")
 
 data.to.plot <- data.difference$emissions_total_ch4_emissions
-ch4.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
+ch4.plot.nonlinearity <- plot.difference.with.grey.line(model.data=data.to.plot,
                                          multiplier=1,
                                          values.linetype=c("solid","solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                                          values.color=c("black","grey","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -992,7 +887,7 @@ ch4.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
                                          title.label="(b) Total CH4 emissions")
 
 data.to.plot <- data.difference$emissions_total_n2o_emissions
-n2o.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
+n2o.plot.nonlinearity <- plot.difference.with.grey.line(model.data=data.to.plot,
                                          multiplier=1,
                                          values.linetype=c("solid","solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                                          values.color=c("black","grey","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -1005,7 +900,7 @@ n2o.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
                                          title.label="(c) Total N2O emissions")
 
 data.to.plot <- data.difference$emissions_total_so2_emissions
-SO2.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
+SO2.plot.nonlinearity <- plot.difference.with.grey.line(model.data=data.to.plot,
                                          multiplier=1,
                                          values.linetype=c("solid","solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                                          values.color=c("black","grey","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -1018,7 +913,7 @@ SO2.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
                                          title.label="(d) Total SO2 emissions")
 
 data.to.plot <- data.difference$emissions_total_nox_emissions
-nox.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
+nox.plot.nonlinearity <- plot.difference.with.grey.line(model.data=data.to.plot,
                                          multiplier=1,
                                          values.linetype=c("solid","solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                                          values.color=c("black","grey","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -1031,7 +926,7 @@ nox.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
                                          title.label="(e) Total NOx emissions")
 
 data.to.plot <- data.difference$emissions_voc_emissions
-voc.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
+voc.plot.nonlinearity <- plot.difference.with.grey.line(model.data=data.to.plot,
                                          multiplier=1,
                                          values.linetype=c("solid","solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                                          values.color=c("black","grey","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -1044,7 +939,7 @@ voc.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
                                          title.label="(f) VOC emissions")
 
 data.to.plot <- data.difference$emissions_co_emissions
-co.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
+co.plot.nonlinearity <- plot.difference.with.grey.line(model.data=data.to.plot,
                                          multiplier=1,
                                          values.linetype=c("solid","solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                                          values.color=c("black","grey","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -1057,7 +952,7 @@ co.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
                                          title.label="(g) Total CO emissions")
 
 data.to.plot <- data.difference$emissions_hfc134a_eq_emissions
-hfc.plot.nonlinearity <- plot.diff(model.data=data.to.plot,
+hfc.plot.nonlinearity <- plot.difference.with.grey.line(model.data=data.to.plot,
                                          multiplier=1,
                                          values.linetype=c("solid","solid","solid","dotted","dashed","solid","solid","solid","solid","solid","solid"),
                                          values.color=c("black","grey","#f39865","#f39865","#f39865","#93a9d8","#c6dda4","#cbbdde","#f9e593","#cba880","#75a593"),
@@ -1082,7 +977,46 @@ panel.emissions <- ggarrange(co2.plot.nonlinearity,
                              align= "v",legend = "bottom",
                              common.legend = T)
 
-ggsave(filename=paste0("figure_14_emissions_nonliearity",".png"),
+
+#------------------------------------------------------------------
+#                            Save the figures
+#------------------------------------------------------------------
+
+ggsave(filename=file.path(figures_dir, paste0("f05",".png")),
+       plot=panel.finance.sector,
+       height = 8, width=10)
+
+ggsave(filename=file.path(figures_dir, paste0("f06",".png")),
+       plot=panel.mortality.sector,
+       height =5 , width=9.5)
+
+ggsave(filename=file.path(figures_dir, paste0("f07",".png")),
+       plot=panel.energy.sector,
+       height = 4, width=10)
+
+ggsave(filename=file.path(figures_dir, paste0("f08",".png")),
+       plot=panel.food.sector,
+       height = 5, width=10)
+
+ggsave(filename=file.path(figures_dir, paste0("f09",".png")),
+       plot=panel.concrete.sector,
+       height =5 , width=10)
+
+ggsave(filename=file.path(figures_dir, paste0("f10",".png")),
+       plot=panel.landuse.sector,
+       height =8 , width=11)
+
+ggsave(filename=file.path(figures_dir, paste0("f11",".png")),
+       plot=panel.climate.sector,
+       height =8 , width=12)
+
+ggsave(filename=file.path(figures_dir, paste0("f13",".png")),
+       plot=panel.nonlinearity,
+       height =14.5 , width=15)
+
+ggsave(filename=file.path(figures_dir, paste0("f14",".png")),
        plot=panel.emissions,
        height =8 , width=16)
 
+cat("Script executed successfully. \n
+    Figures saved to:", normalizePath(figures_dir), "\n")

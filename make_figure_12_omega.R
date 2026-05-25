@@ -1,10 +1,13 @@
-# Script to estimate Nordhaus damage on FRIDA's EMB and Failre rate of loan channel
-
-# Input - Output data from runDetermineComoundDamage_foreachrun.R
+#-----------------------------------------------------------------------------------------------
+# Script to compare FRIDA's economic damage (EMB and Failure rate of loan channel) with that 
+# of Nordhaus' DICE model
+#
+# Input - RDS files containing the outputs corresponding to FRIDA v2.1
 
 # Output - Figure for output ratios relative to NoImpacts counterfactual
-
-# Translated Cecilie's Python to R
+#
+# Run the script with source('make_figure_12_omega.R')
+#----------------------------------------------------------------------------------------------
 
 library(readxl)
 library(ggplot2)
@@ -17,18 +20,20 @@ library(patchwork)
 # Set working directory to script location
 # ---------------------------------------------------------------------
 remove(list=ls())
-script_dir <- dirname(getActiveDocumentContext()$path)
+script_path <- normalizePath("make_figure_12_omega.R")
+script_dir  <- dirname(script_path)
 setwd(script_dir)
-data_dir <- 'G:/My Drive/R/r-scripts/worldTrans/WorldTransFRIDA-aggregateDamages/outputData/old data with more variables'
+data_dir    <- file.path(script_dir,'data')
+figures_dir <- file.path(script_dir, 'figures')
 
 # ---------------------------------------------------------------------
 # User settings
 # ---------------------------------------------------------------------
 
-emb.cfb.on      <- file.path(data_dir,'dataForCompoundDam-policy_EMB-ClimateFeedback_On-ClimateSTAOverride_Off.RDS')
-emb.cfb.finance <- file.path(data_dir,'dataForCompoundDam-policy_EMB-ClimateFeedback_FinanceImpact-ClimateSTAOverride_Off.RDS')
+file.emb     <- file.path(data_dir,'dataForCompoundDam-ClimateFeedback_AllImpacts.RDS')
+file.finance <- file.path(data_dir,'dataForCompoundDam-ClimateFeedback_FRoL.RDS')
 
-OUTPUT_FILE <- file.path(script_dir, "figure_omega.png")
+OUTPUT_FILE <- file.path(figures_dir, "f12.png")
 
 # Nordhaus DICE-2016R damage coefficient
 A2_DICE_2016R <- 0.00236
@@ -71,26 +76,57 @@ construct_data <- function(input_data, variable1, variable2, which_quantile) {
 # Main
 # ---------------------------------------------------------------------
 
-if (!file.exists(emb.cfb.on) ) {
-  stop(paste("Input file not found:", normalizePath(emb.cfb.on)))
+if (!file.exists(file.emb) ) {
+  stop(paste("Input file not found:", normalizePath(file.emb)))
 }
 
-if (!file.exists(emb.cfb.finance)) {
-    stop(paste("Input file not found:", normalizePath(emb.cfb.finance)))
+if (!file.exists(file.finance)) {
+    stop(paste("Input file not found:", normalizePath(file.finance)))
 }
 
-df.cfb.on <- readRDS(emb.cfb.on)
-df.cfb.finance <- readRDS(emb.cfb.finance)
-variables.needed <- c("gdp_real_gdp_in_2021c","energy_balance_model_surface_temperature_anomaly")
+df.emb     <- readRDS(file.emb)
+df.finance <- readRDS(file.finance)
+variables.needed <- c("demographics_real_gdp_per_person","energy_balance_model_surface_temperature_anomaly","demographics_population")
 
 df.all <- sapply(variables.needed, function(k) {
-  map_df(.x=list("counterfactual"=df.cfb.on[[k]]$counterfactual,
-                 "emb"=df.cfb.on[[k]]$baseline,
-                 "finance"=df.cfb.finance[[k]]$baseline
+  map_df(.x=list("counterfactual"=df.emb[[k]]$counterfactual,
+                 "emb"=df.emb[[k]]$baseline,
+                 "finance"=df.finance[[k]]$baseline
                  ),
          .f=bind_rows,
          .id="Experiment")}, simplify = FALSE)
 
+#-------------------------------------------------------------------------------
+# Input data doesn't have GDP, but it has GDP per capita and Population.
+# So estimate GDP = GDP per capita * Population
+#-------------------------------------------------------------------------------
+df.all.unlist          <- do.call(rbind, df.all) 
+df.all.unlist$variable <- unlist(lapply(strsplit(rownames(df.all.unlist),"\\."), '[[', 1))
+
+real.gdp <- df.all.unlist %>%
+  
+  # keep only desired variables
+  filter(variable %in% c("demographics_real_gdp_per_person", "demographics_population")) %>%
+  
+  # group
+  group_by(Experiment, year) %>%
+  
+  # compute the product
+  summarise(
+    across(c(low2, low1, median, high1, high2), prod),
+    
+  # new variable name  
+    variable = "gdp_real_gdp_in_2021c",
+    .groups = "drop"
+  ) %>%
+  select(Experiment, year, low2, low1, median, high1, high2, variable)
+
+# Merge the real_gdp back to the original list as a list 
+df.all$gdp_real_gdp_in_2021c <- real.gdp %>% select(-variable)
+
+#------------------------------------------------------------------------------------
+# Create columnised data for plotting
+#-----------------------------------------------------------------------------------
 
 required_cols <- c("NoImpacts_GDP", "EMB_GDP",  "FRoL_GDP",  "EMB_STA")
 df.vars.combined.median <- construct_data(df.all,"gdp_real_gdp_in_2021c", "energy_balance_model_surface_temperature_anomaly", "median")
@@ -214,7 +250,7 @@ p1 <- ggplot(df_time_final) +
         legend.key.spacing.x = unit(2,"cm"),
         legend.key.width = unit(2, "lines"))
 
-print(p1)
+#print(p1)
 # ---------------------------------------------------------------------
 # Plot (panel b)
 # ---------------------------------------------------------------------
@@ -248,6 +284,6 @@ ggsave(
   dpi = DPI
 )
 
-print(combined_plot)
+#print(combined_plot)
 
 cat("Saved figure to:", normalizePath(OUTPUT_FILE), "\n")
