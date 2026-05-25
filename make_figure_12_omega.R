@@ -2,11 +2,11 @@
 # Script to compare FRIDA's economic damage (EMB and Failure rate of loan channel) with that 
 # of Nordhaus' DICE model
 #
-# Input - RDS files containing the outputs corresponding to FRIDA v2.1
+# Input - RDS files containing the outputs from FRIDA v2.1 uncertainty runs
 
 # Output - Figure for output ratios relative to NoImpacts counterfactual
 #
-# Run the script with source('make_figure_12_omega.R')
+# Run the script on RStudio/VS Code/Linux terminal with - source('make_figure_12_omega.R')
 #----------------------------------------------------------------------------------------------
 
 library(readxl)
