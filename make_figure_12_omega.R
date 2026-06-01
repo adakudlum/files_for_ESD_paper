@@ -226,7 +226,7 @@ df_temp_long <- tidyr::pivot_longer(
 p1 <- ggplot(df_time_final) +
   geom_line(mapping=aes(x = Year, y = median, color = Scenario), linewidth = 1.2) +
   labs(
-    title = "Growth v/s Level effects: FRIDA-v2.1 and Nordhaus",
+    title = "Growth v/s Level effects: FRIDA-v2.1 and DICE",
     y = "Output ratio Ω(t)",
     x = "Year"
   ) +
@@ -236,10 +236,10 @@ p1 <- ggplot(df_time_final) +
                      labels= c("AllImpacts/NoImpacts","FRoL/NoImpacts","Nordhaus DICE-2016R level damage"))+
   ylim(0, 1.05) +
   theme_bw() +
-  theme(axis.text.x = element_text(family = "sans",size=12,angle=45, vjust=0.3, color="black"),
-        axis.text.y = element_text(family = "sans",size=12, vjust=0.3, color="black"),
-        axis.title = element_text(family = "sans",size=12, vjust=0.3, color="black"),
-        plot.title = element_text(family = "sans",size=12, vjust=0.3, color="black"),
+  theme(axis.text.x = element_text(family = "sans",size=13,angle=45, vjust=0.3, color="black"),
+        axis.text.y = element_text(family = "sans",size=13, vjust=0.3, color="black"),
+        axis.title = element_text(family = "sans",size=14, vjust=0.3, color="black"),
+        plot.title = element_text(family = "sans",size=14, vjust=0.3, color="black"),
         panel.grid.major = element_line(color="grey",linewidth=0.5,linetype=3),
         panel.grid.minor = element_blank(),
         legend.direction = "vertical",
